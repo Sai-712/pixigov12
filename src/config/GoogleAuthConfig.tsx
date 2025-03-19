@@ -8,7 +8,8 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
-  'https://main.d2egbkasraqmnr.amplifyapp.com'
+  'https://main.d2egbkasraqmnr.amplifyapp.com',
+  'https://main.dlyhbjyn2h6lw.amplifyapp.com'
 ];
 
 // Allow all origins in development mode
