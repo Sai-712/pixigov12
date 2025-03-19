@@ -129,12 +129,12 @@ const EventDashboard = () => {
                 updatedAt: new Date().toISOString()
             };
 
-            // Create shared event folder structure with proper error handling
-            const sharedFolderKey = `events/shared/${eventId}/`;
+            // Create event folder structure with proper error handling
+            const eventFolderKey = `events/${eventId}/`;
             const folderPaths = [
-                sharedFolderKey,
-                `${sharedFolderKey}images/`,
-                `${sharedFolderKey}selfies/`
+                eventFolderKey,
+                `${eventFolderKey}images/`,
+                `${eventFolderKey}selfies/`
             ];
 
             // Create folders using Upload with retries and error handling
