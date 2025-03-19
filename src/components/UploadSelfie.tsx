@@ -130,9 +130,16 @@ const UploadSelfie = () => {
             console.log('selfieurl',selfieUrl);
             // Always use the shared event path for selfies and images
             // Use event-specific path for all operations
-            const eventPath = `events/${eventId}`;
+            const userEmail = localStorage.getItem('userEmail');
+            const isSharedAccess = localStorage.getItem('isSharedAccess') === 'true';
+            
+            // Define paths for both shared and authenticated access
+            const eventPath = isSharedAccess || !userEmail ? `events/shared/${eventId}` : `events/${eventId}`;
             const initialSelfiePath = `${eventPath}/selfies/${selfieUrl}`;
             const initialImagesPath = `${eventPath}/images/`;
+            
+            // Also check the alternative path for shared access
+            const alternativeImagesPath = isSharedAccess ? `events/${eventId}/images/` : null;
             
             let validPath = null;
             
@@ -158,60 +165,59 @@ const UploadSelfie = () => {
             }
             
             if (!validPath) {
+                console.error('No valid path found for images');
+                console.log('Event ID:', eventId);
+                console.log('Is Shared Access:', isSharedAccess);
+                console.log('Initial Images Path:', initialImagesPath);
+                console.log('Alternative Images Path:', alternativeImagesPath);
                 throw new Error('No valid images found in this event. Please ensure images are uploaded before attempting face comparison.');
             }
+
+            // Log the path being used for face comparison
+            console.log('Using image path for comparison:', validPath.imagesPath);
             
-            // Check if the event directory exists and has images
-            try {
-                const listImagesCommand = new ListObjectsV2Command({
-                    Bucket: S3_BUCKET_NAME,
-                    Prefix: imagesPath,
-                    MaxKeys: 1000
-                });
-                
-                console.log('Checking images in path:', imagesPath);
-                const listImagesResponse = await s3Client.send(listImagesCommand);
-                
-                if (!listImagesResponse.Contents || listImagesResponse.Contents.length === 0) {
-                    console.log('No contents found in path:', imagesPath);
-                    throw new Error('No images found in this event. Please ensure images are uploaded before attempting face comparison.');
-                }
+            // Check both primary and alternative paths for images
+            const pathsToCheck = [validPath.imagesPath];
+            if (alternativeImagesPath) {
+                pathsToCheck.push(alternativeImagesPath);
+            }
 
-                // Filter valid image files
-                const validImages = listImagesResponse.Contents.filter(item => {
-                    const isValid = item.Key && /\.(jpg|jpeg|png)$/i.test(item.Key);
-                    if (!isValid && item.Key) {
-                        console.log('Skipping invalid file:', item.Key);
+            let foundValidImages = false;
+            let lastError = null;
+
+            for (const pathToCheck of pathsToCheck) {
+                try {
+                    console.log('Checking images in path:', pathToCheck);
+                    const listImagesCommand = new ListObjectsV2Command({
+                        Bucket: S3_BUCKET_NAME,
+                        Prefix: pathToCheck,
+                        MaxKeys: 1000
+                    });
+                    
+                    const listImagesResponse = await s3Client.send(listImagesCommand);
+                    
+                    if (listImagesResponse.Contents && listImagesResponse.Contents.length > 0) {
+                        foundValidImages = true;
+                        validPath.imagesPath = pathToCheck;
+                        break;
                     }
-                    return isValid;
-                });
+                } catch (error) {
+                    console.log(`Error checking path ${pathToCheck}:`, error);
+                    lastError = error;
+                }
+            }
 
-                if (validImages.length === 0) {
-                    console.log('No valid image files found in contents');
-                    throw new Error('No valid images (JPEG/PNG) found in this event. Please upload some images first.');
-                }
-                
-                console.log('Found valid images:', validImages.length);
-            } catch (error: any) {
-                console.error('Error checking event images:', error);
-                if (error.name === 'AccessDenied') {
-                    console.error('Access denied error for path:', imagesPath);
-                    throw new Error('Access denied. Please check your permissions and try again.');
-                }
-                if (error.name === 'NoSuchBucket') {
-                    console.error('Bucket not found:', S3_BUCKET_NAME);
-                    throw new Error('Storage configuration error. Please contact support.');
-                }
-                console.error('Unexpected error:', error.message);
-                throw new Error('Unable to access event images. Please try again.');
+            if (!foundValidImages) {
+                console.error('No valid images found in any path');
+                throw new Error('No images found in this event. Please ensure images are uploaded before attempting face comparison.');
             }
             // List all images in the event using the shared path
             const listCommand = new ListObjectsV2Command({
                 Bucket: S3_BUCKET_NAME,
-                Prefix: imagesPath
+                Prefix: validPath.imagesPath
             });
             
-            console.log('Listing images from path:', imagesPath);
+            console.log('Listing images from path:', validPath.imagesPath);
     
             let uploadKeys: string[] = [];
             try {
@@ -247,7 +253,7 @@ const UploadSelfie = () => {
                             SourceImage: {
                                 S3Object: {
                                     Bucket: S3_BUCKET_NAME,
-                                    Name: selfiePath,
+                                    Name: validPath.selfiePath,
                                 },
                             },
                             TargetImage: {
@@ -375,8 +381,14 @@ const UploadSelfie = () => {
                 throw new Error('Event ID is required for uploading a selfie.');
             }
 
-            // Use event-specific path for selfie upload
-            const selfiePath = `events/${selectedEvent}/selfies/${fileName}`;
+            const userEmail = localStorage.getItem('userEmail');
+            const isSharedAccess = localStorage.getItem('isSharedAccess') === 'true';
+            const sessionId = localStorage.getItem('sessionId');
+
+            // Define folder paths for both shared and authenticated access
+            const folderPaths = isSharedAccess || !userEmail
+                ? [`events/shared/${selectedEvent}/selfies/${fileName}`, `events/${selectedEvent}/selfies/${fileName}`]
+                : [`events/${selectedEvent}/selfies/${fileName}`];
             
             let uploadSuccess = false;
             let lastError;
