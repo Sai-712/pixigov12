@@ -138,15 +138,27 @@ const UploadSelfie = () => {
                 const listImagesCommand = new ListObjectsV2Command({
                     Bucket: S3_BUCKET_NAME,
                     Prefix: imagesPath,
-                    MaxKeys: 1
+                    MaxKeys: 1000
                 });
                 
                 const listImagesResponse = await s3Client.send(listImagesCommand);
                 if (!listImagesResponse.Contents || listImagesResponse.Contents.length === 0) {
                     throw new Error('No images found in this event. Please ensure images are uploaded before attempting face comparison.');
                 }
-            } catch (error) {
+
+                // Filter valid image files
+                const validImages = listImagesResponse.Contents.filter(item => 
+                    item.Key && /\.(jpg|jpeg|png)$/i.test(item.Key)
+                );
+
+                if (validImages.length === 0) {
+                    throw new Error('No valid images (JPEG/PNG) found in this event. Please upload some images first.');
+                }
+            } catch (error: any) {
                 console.error('Error checking event images:', error);
+                if (error.name === 'AccessDenied') {
+                    throw new Error('Access denied. Please check your permissions and try again.');
+                }
                 throw new Error('Unable to access event images. Please try again.');
             }
             // List all images in the event using the shared path
