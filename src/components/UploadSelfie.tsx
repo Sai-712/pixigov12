@@ -129,50 +129,37 @@ const UploadSelfie = () => {
             }
             console.log('selfieurl',selfieUrl);
             // Always use the shared event path for selfies and images
-            const userEmail = localStorage.getItem('userEmail');
-            const isSharedAccess = localStorage.getItem('isSharedAccess') === 'true';
-            
-            // Try both shared and user-specific paths
-            const paths = isSharedAccess || !userEmail
-                ? [`events/shared/${eventId}`, `events/${userEmail || 'shared'}/${eventId}`]
-                : [`events/${userEmail}/${eventId}`];
+            // Use event-specific path for all operations
+            const eventPath = `events/${eventId}`;
+            const initialSelfiePath = `${eventPath}/selfies/${selfieUrl}`;
+            const initialImagesPath = `${eventPath}/images/`;
             
             let validPath = null;
-            let validImages = [];
             
-            for (const basePath of paths) {
-                const selfiePath = `${basePath}/selfies/${selfieUrl}`;
-                const imagesPath = `${basePath}/images/`;
+            // Check for valid images in the event path
+            const listImagesCommand = new ListObjectsV2Command({
+                Bucket: S3_BUCKET_NAME,
+                Prefix: initialImagesPath,
+                MaxKeys: 1000
+            });
+            
+            const listImagesResponse = await s3Client.send(listImagesCommand);
+            if (listImagesResponse.Contents && listImagesResponse.Contents.length > 0) {
+                const validImages = listImagesResponse.Contents.filter(item => 
+                    item.Key && /\.(jpg|jpeg|png)$/i.test(item.Key)
+                );
                 
-                try {
-                    const listImagesCommand = new ListObjectsV2Command({
-                        Bucket: S3_BUCKET_NAME,
-                        Prefix: imagesPath,
-                        MaxKeys: 1000
-                    });
-                    
-                    const listImagesResponse = await s3Client.send(listImagesCommand);
-                    if (listImagesResponse.Contents && listImagesResponse.Contents.length > 0) {
-                        validImages = listImagesResponse.Contents.filter(item => 
-                            item.Key && /\.(jpg|jpeg|png)$/i.test(item.Key)
-                        );
-                        
-                        if (validImages.length > 0) {
-                            validPath = { selfiePath, imagesPath };
-                            break;
-                        }
-                    }
-                } catch (error) {
-                    console.log(`Checking path ${basePath}: ${error.message}`);
-                    continue;
+                if (validImages.length > 0) {
+                    validPath = { 
+                        selfiePath: initialSelfiePath, 
+                        imagesPath: initialImagesPath 
+                    };
                 }
             }
             
             if (!validPath) {
                 throw new Error('No valid images found in this event. Please ensure images are uploaded before attempting face comparison.');
             }
-            
-            const { selfiePath, imagesPath } = validPath;
             
             // Check if the event directory exists and has images
             try {
@@ -388,15 +375,8 @@ const UploadSelfie = () => {
                 throw new Error('Event ID is required for uploading a selfie.');
             }
 
-            const userEmail = localStorage.getItem('userEmail');
-            const isSharedAccess = localStorage.getItem('isSharedAccess') === 'true';
-            const sessionId = localStorage.getItem('sessionId');
-
-            // For shared access or incognito mode, use sessionId/eventId as identifier
-            // For shared access or mobile uploads, try both paths
-            const folderPaths = isSharedAccess || !userEmail
-                ? [`events/shared/${selectedEvent}/selfies/${fileName}`, `events/${userEmail || 'shared'}/${selectedEvent}/selfies/${fileName}`]
-                : [`events/${userEmail}/${selectedEvent}/selfies/${fileName}`];
+            // Use event-specific path for selfie upload
+            const selfiePath = `events/${selectedEvent}/selfies/${fileName}`;
             
             let uploadSuccess = false;
             let lastError;
