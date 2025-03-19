@@ -132,9 +132,7 @@ const navigate = useNavigate();
       
       // Define possible paths to check for images
       const eventToUse = selectedEvent || eventId;
-      const prefixes = isSharedAccess || !userEmail
-        ? [`events/shared/${eventToUse}/`, `events/${userEmail || 'shared'}/${eventToUse}/`]
-        : [`events/${userEmail}/${eventToUse}/`];
+      const prefixes = [`events/shared/${eventToUse}/`];
       
       let allImages: EventImage[] = [];
       let fetchError: any = null;
@@ -249,7 +247,7 @@ const navigate = useNavigate();
                   </div>
                   <div className="flex flex-col items-center space-y-4">
                     <QRCodeSVG
-                       value={`${window.location.origin}/upload-selfie?eventId=${selectedEvent}`}
+                       value={`${window.location.origin}/upload-selfie/${eventId}?source=qr`}
                       size={200}
                       level="H"
                       includeMargin={true}
@@ -341,7 +339,7 @@ const navigate = useNavigate();
                 try {
                   for (let i = 0; i < files.length; i++) {
                     const file = files[i];
-                    const key = `events/${userEmail}/${eventId}/${Date.now()}-${file.name}`;
+                    const key = `events/shared/${eventId}/${Date.now()}-${file.name}`;
                     
                     const upload = new Upload({
                       client: s3Client,
