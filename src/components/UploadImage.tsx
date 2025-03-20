@@ -78,8 +78,7 @@ const UploadImage = () => {
 
             // For shared access or mobile uploads, try both paths
             const folderPaths = isSharedAccess || !userEmail
-                ? [`events/shared/${selectedEvent}/images/${fileName}`, `events/${userEmail || 'shared'}/${selectedEvent}/images/${fileName}`]
-                : [`events/${userEmail}/${selectedEvent}/images/${fileName}`];
+                ? [`events/shared/${selectedEvent}/images/${fileName}`];
             
             let uploadSuccess = false;
             let lastError;
