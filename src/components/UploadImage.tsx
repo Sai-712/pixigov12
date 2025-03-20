@@ -143,7 +143,8 @@ const UploadImage = () => {
                 }
                 const fileName = `${Date.now()}-${image.name}`;
                 const imageUrl = await uploadToS3(image, fileName);
-                return imageUrl;
+                // Construct the full S3 URL for the uploaded image
+                return `https://${S3_BUCKET_NAME}.s3.amazonaws.com/${imageUrl}`;
             });
 
             const urls = await Promise.all(uploadPromises);
