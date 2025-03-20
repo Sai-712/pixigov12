@@ -100,9 +100,9 @@ const UploadSelfie = () => {
             throw new Error('Only JPEG and PNG images are supported');
         }
 
-        // Check file size (5MB max)
-        if (file.size > 5 * 1024 * 1024) {
-            throw new Error('Image size must be less than 5MB');
+        // Check file size (20MB max)
+        if (file.size > 20 * 1024 * 1024) {
+            throw new Error('Image size must be less than 20MB');
         }
         return true;
     };
