@@ -76,51 +76,39 @@ const UploadImage = () => {
             const isSharedAccess = localStorage.getItem('isSharedAccess') === 'true';
             const sessionId = localStorage.getItem('sessionId');
 
-            // For shared access or mobile uploads, try both paths
-            const folderPaths = `events/shared/${selectedEvent}/images/${fileName}`
-                
+            // Use shared event folder structure for all uploads
+            const folderPath = `events/shared/${selectedEvent}/images/${fileName}`;
             
             let uploadSuccess = false;
             let lastError;
             let uploadedUrl = '';
             
-            for (const folderPath of folderPaths) {
-                try {
-                    const uploadParams = {
-                        Bucket: S3_BUCKET_NAME,
-                        Key: folderPath,
-                        Body: file,
-                        ContentType: file.type,
-                        Metadata: {
-                            'event-id': selectedEvent,
-                            'user-email': userEmail || '',
-                            'session-id': sessionId || '',
-                            'is-shared-access': String(isSharedAccess),
-                            'upload-date': new Date().toISOString()
-                        }
-                    };
-
-                    const uploadInstance = new Upload({
-                        client: s3Client,
-                        params: uploadParams,
-                        partSize: 5 * 1024 * 1024,
-                        leavePartsOnError: false,
-                    });
-
-                    await uploadInstance.done();
-                    uploadSuccess = true;
-                    uploadedUrl = `https://${S3_BUCKET_NAME}.s3.amazonaws.com/${folderPath}`;
-                    break;
-                } catch (error) {
-                    lastError = error;
-                    console.error(`Error uploading to path ${folderPath}:`, error);
-                    // Continue to next path if available
-                    continue;
+            const uploadParams = {
+                Bucket: S3_BUCKET_NAME,
+                Key: folderPath,
+                Body: file,
+                ContentType: file.type,
+                Metadata: {
+                    'event-id': selectedEvent,
+                    'user-email': userEmail || '',
+                    'session-id': sessionId || '',
+                    'is-shared-access': String(isSharedAccess),
+                    'upload-date': new Date().toISOString()
                 }
-            }
+            };
 
-            if (!uploadSuccess) {
-                console.error('All upload attempts failed:', lastError);
+            const uploadInstance = new Upload({
+                client: s3Client,
+                params: uploadParams,
+                partSize: 5 * 1024 * 1024,
+                leavePartsOnError: false,
+            });
+
+            try {
+                await uploadInstance.done();
+                return folderPath;
+            } catch (error) {
+                console.error(`Error uploading to path ${folderPath}:`, error);
                 throw new Error('Failed to upload image. Please try again.');
             }
 
