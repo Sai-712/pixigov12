@@ -64,33 +64,28 @@ const EventImages = ({ eventId }: EventImagesProps) => {
   useEffect(() => {
     const fetchEventImages = async () => {
       try {
-        const userEmail = localStorage.getItem('userEmail');
-        if (!userEmail) throw new Error('User not authenticated');
-
-        // List objects in the specific event folder
+        // List objects in the shared event folder
         const listCommand = new ListObjectsV2Command({
           Bucket: S3_BUCKET_NAME,
-          Prefix: `events/${userEmail}/${eventId}/`
+          Prefix: `events/shared/${eventId}/images/`
         });
-
+    
         const result = await s3Client.send(listCommand);
         if (!result.Contents) return;
-
+    
         const imageItems = result.Contents
           .filter(item => item.Key && item.Key.match(/\.(jpg|jpeg|png)$/i))
           .map(item => ({
             url: `https://${S3_BUCKET_NAME}.s3.amazonaws.com/${item.Key}`,
             key: item.Key || ''
           }));
-
-        // Process images for faces and duplicates
-        // Map all images directly without face detection
+    
         const processedImages = imageItems.map(item => ({
           url: item.url,
           key: item.key,
           hasFace: false
         }));
-
+    
         setImages(processedImages);
         setProcessingStatus('');
       } catch (error) {
@@ -103,16 +98,13 @@ const EventImages = ({ eventId }: EventImagesProps) => {
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!e.target.files || e.target.files.length === 0) return;
     
-      const userEmail = localStorage.getItem('userEmail');
-      if (!userEmail) throw new Error('User not authenticated');
-    
       setProcessingStatus('Uploading images...');
       const files = Array.from(e.target.files);
     
       try {
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
-          const key = `events/${userEmail}/${eventId}/${Date.now()}-${file.name}`;
+          const key = `events/shared/${eventId}/images/${Date.now()}-${file.name}`;
           
           const uploadCommand = new PutObjectCommand({
             Bucket: S3_BUCKET_NAME,
