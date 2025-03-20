@@ -77,8 +77,8 @@ const UploadImage = () => {
             const sessionId = localStorage.getItem('sessionId');
 
             // For shared access or mobile uploads, try both paths
-            const folderPaths = isSharedAccess || !userEmail
-                ? [`events/shared/${selectedEvent}/images/${fileName}`];
+            const folderPaths = `events/shared/${selectedEvent}/images/${fileName}`
+                
             
             let uploadSuccess = false;
             let lastError;
