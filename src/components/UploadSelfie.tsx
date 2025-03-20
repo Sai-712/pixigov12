@@ -133,13 +133,13 @@ const UploadSelfie = () => {
             const userEmail = localStorage.getItem('userEmail');
             const isSharedAccess = localStorage.getItem('isSharedAccess') === 'true';
             
-            // Define paths for both shared and authenticated access
-            const eventPath = isSharedAccess || !userEmail ? `events/shared/${eventId}` : `events/${eventId}`;
+            // Define paths based on user email for both shared and authenticated access
+            const eventPath = isSharedAccess || !userEmail ? `events/shared/${eventId}` : `${userEmail}/${eventId}`;
             const initialSelfiePath = `${eventPath}/selfies/${selfieUrl}`;
             const initialImagesPath = `${eventPath}/images/`;
             
             // Also check the alternative path for shared access
-            const alternativeImagesPath = isSharedAccess ? `events/${eventId}/images/` : null;
+            const alternativeImagesPath = isSharedAccess ? `${userEmail}/${eventId}/images/` : null;
             
             let validPath = null;
             
@@ -385,10 +385,10 @@ const UploadSelfie = () => {
             const isSharedAccess = localStorage.getItem('isSharedAccess') === 'true';
             const sessionId = localStorage.getItem('sessionId');
 
-            // Define folder paths for both shared and authenticated access
+            // Define folder paths based on user email for both shared and authenticated access
             const folderPaths = isSharedAccess || !userEmail
-                ? [`events/shared/${selectedEvent}/selfies/${fileName}`, `events/${selectedEvent}/selfies/${fileName}`]
-                : [`events/${selectedEvent}/selfies/${fileName}`];
+                ? [`events/shared/${selectedEvent}/selfies/${fileName}`]
+                : [`${userEmail}/${selectedEvent}/selfies/${fileName}`];
             
             let uploadSuccess = false;
             let lastError;
